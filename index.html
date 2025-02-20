@@ -4,6 +4,47 @@
     <meta charset="UTF-8">
     <title>梦境异变模拟器 - 正太版</title>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+        }
+        .status-item {
+            margin: 20px 0;
+            padding: 10px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 5px;
+            height: 20px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .progress {
+            height: 100%;
+            width: 0;
+            transition: width 0.2s ease-in-out;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
         /* 新增危险状态样式 */
         .danger {
             background: #ffe6e6 !important;
@@ -18,11 +59,13 @@
     </style>
 </head>
 <body>
+    <h1>梦境异变模拟器 - 正太版</h1>
+    
     <!-- 在状态栏新增污染度 -->
     <div class="status-item">
         <div>精神污染度: <span id="corruption">0</span>%</div>
         <div class="progress-bar">
-            <div class="progress" id="corruption-bar" style="width: 0%"></div>
+            <div class="progress" id="corruption-bar"></div>
         </div>
     </div>
 
@@ -31,16 +74,14 @@
     <button onclick="takeAction('artifact')">🔮 接触古物</button>
 
 <script>
-// 修改游戏状态
 let gameState = {
     stamina: 100,
     shotaProgress: 0,
-    corruption: 0, // 新增污染值
+    corruption: 0,
     days: 0,
-    shadowMeter: 0 // 隐藏的异变值
-}
+    shadowMeter: 0
+};
 
-// 新增黑暗事件库
 const darkEvents = [
     {
         trigger: 'occult',
@@ -49,7 +90,7 @@ const darkEvents = [
             "仪式阵发出诡异红光，有什么东西进入了你的梦境",
             "祭坛上的玩偶突然转头对你眨了眨眼"
         ],
-        effect: { stamina: -40, progress: +15, corruption: +20 }
+        effect: { stamina: -40, shotaProgress: 15, corruption: 20 }
     },
     {
         trigger: 'artifact',
@@ -58,14 +99,10 @@ const darkEvents = [
             "文物表面的图案开始像血管般脉动",
             "你突然能听懂玩偶们的窃窃私语"
         ],
-        effect: { stamina: -30, progress: +10, corruption: +15 }
+        effect: { stamina: -30, shotaProgress: 10, corruption: 15 }
     }
 ];
 
-// 扩展原有事件库
-events.forEach(e => e.effect.corruption = e.effect.corruption || 0);
-
-// 新增12个异变事件
 const corruptionEvents = [
     "感觉有冰凉的手指划过你的后颈...",
     "镜中的人影比你早0.5秒做出动作...",
@@ -81,7 +118,6 @@ const corruptionEvents = [
     "闻到浓烈的檀香味（明明没有香炉）..."
 ];
 
-// 新增7种黑暗结局
 const badEndings = [
     {
         condition: (gs) => gs.corruption >= 100 && gs.shotaProgress < 50,
@@ -117,29 +153,25 @@ const badEndings = [
 function takeAction(actionType) {
     if (checkGameEnd()) return;
 
-    // 50%概率触发暗黑事件
     let eventPool = Math.random() < 0.5 ? 
-        [...events, ...darkEvents] : events;
-    
+        [...darkEvents] : [];
+
     let event = getRandomEvent(actionType, eventPool);
     
-    // 更新状态值
     ['stamina', 'shotaProgress', 'corruption'].forEach(stat => {
         gameState[stat] = Math.max(0, Math.min(100, 
             gameState[stat] + (event.effect[stat] || 0)));
     });
 
-    // 隐藏的异变值计算
     gameState.shadowMeter += Math.floor(
         (gameState.corruption * 0.7) + (gameState.shotaProgress * 0.3)
     ) % 100;
 
-    addEventMessage(event.message);
+    addEventMessage(event.messages[Math.floor(Math.random() * event.messages.length)]);
     
-    // 30%概率触发异变事件
     if (Math.random() < 0.3) {
         addEventMessage(
-            corruptionEvents[Math.floor(Math.random()*corruptionEvents.length)]
+            corruptionEvents[Math.floor(Math.random() * corruptionEvents.length)]
         );
         gameState.corruption += 5;
     }
@@ -148,9 +180,18 @@ function takeAction(actionType) {
     checkGameEnd();
 }
 
+// 获取随机事件
+function getRandomEvent(actionType, eventPool) {
+    return eventPool.find(event => event.trigger === actionType) || { effect: {} };
+}
+
+// 添加事件消息
+function addEventMessage(message) {
+    alert(message); // 使用弹窗展示信息
+}
+
 // 增强游戏结束检查
 function checkGameEnd() {
-    // 原有成功/体力失败结局
     if (gameState.shotaProgress >= 100) {
         alert('🎉 成功！但似乎有什么别的东西也一起醒来了...');
         resetGame();
@@ -162,7 +203,6 @@ function checkGameEnd() {
         return true;
     }
 
-    // 检查所有黑暗结局
     const triggeredEnding = badEndings.find(end => end.condition(gameState));
     if (triggeredEnding) {
         alert(`💔 坏结局：${triggeredEnding.message}`);
@@ -172,13 +212,22 @@ function checkGameEnd() {
     return false;
 }
 
+function resetGame() {
+    gameState = {
+        stamina: 100,
+        shotaProgress: 0,
+        corruption: 0,
+        days: 0,
+        shadowMeter: 0
+    };
+    updateDisplay();
+}
+
 // 更新显示函数
 function updateDisplay() {
-    // 原有更新逻辑...
     document.getElementById('corruption').textContent = gameState.corruption;
     document.getElementById('corruption-bar').style.width = `${gameState.corruption}%`;
     
-    // 当污染度超过50%时添加危险样式
     document.getElementById('corruption-bar').parentElement.classList.toggle(
         'danger', gameState.corruption >= 50
     );
